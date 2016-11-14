@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>ChatterBox</title>
+        <link rel="stylesheet" type="text/css" href="bootstrap/css/bootstrap.css">
+        <link rel="stylesheet" type="text/css" href="bootstrap/css/main.css">
+        <link rel="stylesheet" type="text/css" href="css/core.css">
+        <link rel="stylesheet" type="text/css" href="css/components.css">
+    </head>
+    <style>
+        .bottom{
+            position: fixed;     
+           text-align: center;    
+           bottom: 10px; 
+           width: 100%;
+        }
+        .wrapper{
+            padding-top: 4%;
+        }
+    </style>
+    <body>
+        <div class="container"> 
+            <div class="row">
+                
+                <nav class="navbar navbar-default navbar-fixed-top">
+                     ChatterBox 
+                </nav>
+                <div class="wrapper">
+                    <div class="col-md-7 col-md-offset-2">
+                        <div id="message-container"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div id="typer-container"></div>
+                    </div>
+                    <div class="form-group  bottom">
+                        <div class="col-md-7 col-md-offset-2">
+                            <input type="text" id="message" class="form-control" placeholder="Enter message here">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" onclick="sendMessage()" class="btn btn-trans btn-inverse waves-effect w-md waves-light m-b-5">Send</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </body>
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/app.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        //initialize socket library and its object
+        var socket = io();
+        
+        //taking input from user
+        var roomName = prompt("Enter name of chat room that you want to create or join");
+        var userName = prompt("Enter your username");
+      
+        //create chat room
+        socket.emit('createRoom',{roomName:roomName,userName:userName});
+
+        //when user joins the chat room
+        socket.on('user joined',function(data){
+            document.getElementById('message-container').innerHTML += data;
+        });
+        
+        //to display when user leave chat room
+        socket.on('disconnected',function(data){
+            document.getElementById('message-container').innerHTML += data;
+        });
+        
+        //Press enter to send message code
+        $('#message').keypress(function(event){
+            if(event.which == 13){
+                sendMessage();
+            }
+        });
+        
+        //Send message to server
+        function sendMessage()
+        {
+            var msg = document.getElementById('message').value;
+            document.getElementById('message').value = '';
+            if(msg){
+                socket.emit('messageForServer', {message: msg, roomName:roomName,userName: userName});
+            }
+        }
+        
+        var typing = false;
+        var timeout = undefined;
+        
+        //when user is no longer typing
+        function timeoutFunction(){
+          typing = false;
+          socket.emit('noLongerTyping');
+        }
+        
+        function onKeyDownNotEnter(){
+          if(typing == false) {
+              
+            typing = true;
+            socket.emit('userIsTyping',userName+' is typing...');
+            timeout = setTimeout(timeoutFunction, 5000);
+              
+          } else {
+            clearTimeout(timeout);
+            timeout = setTimeout(timeoutFunction, 5000);
+          }
+
+        }
+        //User is typing functionality
+        $('#message').keyup(function(event){
+            if(event.which != 13 && userName != ''){
+                onKeyDownNotEnter();
+            }
+        });
+        
+        socket.on('all users',function(data){
+            alert(data);
+        });
+        
+        //users will see who is typing from this code
+        socket.on('userIsStillTyping',function(data){
+            document.getElementById('typer-container').innerHTML += data;
+        });
+        
+        //remove user is typing
+        socket.on('userIsNotTyping',function(){
+            document.getElementById('typer-container').innerHTML = '';
+        });
+        
+        //Display broadcasted message
+        socket.on('messageToBeDisplayed',function(data){
+            document.getElementById('message-container').innerHTML += data;
+        });
+        
+    </script>
+</html>
