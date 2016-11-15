@@ -14,6 +14,7 @@ io.on('connection', function(socket){
     socket.on('createRoom',function(data){
         userName = data.userName;
         //creating or joining room
+        socket.nickname = userName;
         socket.join(data.roomName);
         roomName = data.roomName;
         //broadcasting new user joined to all other sockets in room
@@ -26,8 +27,7 @@ io.on('connection', function(socket){
     socket.on('messageForServer',function(data){
         //will alert all users
         var userLength = Object.keys(io.nsps['/'].adapter.rooms);
-        var sockets = Object.keys(io.nsps['/'].adapter.rooms[userLength[0]]['sockets']);
-        socket.emit('all users',sockets);
+        var sockets = Object.keys(io.nsps['/'].adapter.rooms['ravi']['sockets']);
      io.sockets.in(data.roomName).emit('messageToBeDisplayed','<strong>'+data.userName+'</strong> : '+data.message+'<br>'); 
     });
     
