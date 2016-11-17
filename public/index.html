@@ -115,10 +115,6 @@
             }
         });
         
-        socket.on('all users',function(data){
-            alert(data);
-        });
-        
         //users will see who is typing from this code
         socket.on('userIsStillTyping',function(data){
             document.getElementById('typer-container').innerHTML += data;
