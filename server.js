@@ -14,7 +14,7 @@ io.on('connection', function(socket){
     //creating chat room
     socket.on('createRoom',function(data){
         userName = data.userName;
-
+        userIP = data.ip;
         //creating or joining room
         socket.nickname = userName;
         socket.join(data.roomName);
@@ -39,12 +39,12 @@ io.on('connection', function(socket){
                         for(var u in obj.users){
                             //console.log(u);
                             if(obj.users[u].roomName == roomName){
-                                thisRoomUsers.push(obj.users[u].userName);
+                                thisRoomUsers.push({userName:obj.users[u].userName,userIP:obj.users[u].ip});
                             }
                         }
                         
-                        thisRoomUsers.push(userName);
-                        obj.users.push({roomName:roomName,userName:userName});
+                        thisRoomUsers.push({userName:userName,userIP:userIP});
+                        obj.users.push({roomName:roomName,userName:userName,ip:userIP});
                         json = JSON.stringify(obj);
                         fs.writeFile('users.json', json, 'utf8');
                         //broadcasting new user joined to all other sockets in room
@@ -103,7 +103,7 @@ io.on('connection', function(socket){
                         for(var u in obj.users){
                             if(obj.users[u].roomName == roomName)
                             {
-                                thisRoomUsers.push(obj.users[u].userName);
+                                thisRoomUsers.push({userName:obj.users[u].userName,userIP:obj.users[u].ip});
                             }
                         }
                         // var index = thisRoomUsers.indexOf(userName);
