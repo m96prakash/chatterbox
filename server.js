@@ -2,8 +2,9 @@ var app = require('express')();
 var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var express = require('express');
-
+var fs = require('fs');
 app.use(express.static('public'));
+var onlineUsers = {};
 
 io.on('connection', function(socket){
     
@@ -13,22 +14,54 @@ io.on('connection', function(socket){
     //creating chat room
     socket.on('createRoom',function(data){
         userName = data.userName;
+
         //creating or joining room
         socket.nickname = userName;
         socket.join(data.roomName);
+
+        // onlineUsers[userName]=data.userName;
+        //onlineUsers[data.roomName] += ','+userName;
+        //var clients = io.sockets.clients(data.roomName);
         roomName = data.roomName;
-        //broadcasting new user joined to all other sockets in room
-        socket.broadcast.in(data.roomName).emit('user joined','<span style="color:#10c469 !important;"><strong>'+userName+'</strong> has joined chatroom.</span><br>');
+        thisRoomUsers = [];
+        //write to file
+        fs.exists('users.json', function(exists)
+        {
+            if(exists)
+            {
+                fs.readFile('users.json', 'utf8',function readFileCallback(err, fileData){
+                    if(err){
+                        console.log(err);
+                    }
+                    else{
+                        obj = JSON.parse(fileData);
+                        
+                        for(var u in obj.users){
+                            //console.log(u);
+                            if(obj.users[u].roomName == roomName){
+                                thisRoomUsers.push(obj.users[u].userName);
+                            }
+                        }
+                        
+                        thisRoomUsers.push(userName);
+                        obj.users.push({roomName:roomName,userName:userName});
+                        json = JSON.stringify(obj);
+                        fs.writeFile('users.json', json, 'utf8');
+                        //broadcasting new user joined to all other sockets in room
+                        socket.broadcast.in(data.roomName).emit('user joined','<span style="color:#10c469 !important;"><strong>'+userName+'</strong> joined.</span><br>');
+                        io.sockets.in(data.roomName).emit('updateUsers',thisRoomUsers);
+                    }
+                });
+            }
+        });
         
     });
     
     
     //Server receives message from client
     socket.on('messageForServer',function(data){
-        //will alert all users
-        var userLength = Object.keys(io.nsps['/'].adapter.rooms);
-        var sockets = Object.keys(io.nsps['/'].adapter.rooms['ravi']['sockets']);
-     io.sockets.in(data.roomName).emit('messageToBeDisplayed','<strong>'+data.userName+'</strong> : '+data.message+'<br>'); 
+        //will alert all users with message
+     io.sockets.in(data.roomName).emit('messageToBeDisplayed',{message:data.message+'<br>',user:data.userName}); 
     });
     
     //when user is typing
@@ -43,8 +76,54 @@ io.on('connection', function(socket){
     
     //when user gets bored
     socket.on('disconnect',function(){
-        socket.broadcast.in(roomName).emit('disconnected','<span style="color:#ff4242 !important;"<strong>'+userName+'</strong> has left the chat room.</span><br>');
+        
+        thisRoomUsers = [];
+        fs.exists('users.json', function(exists)
+        {
+            if(exists)
+            {
+                fs.readFile('users.json', 'utf8',function readFileCallback(err, fileData)
+                {
+                    if(err){
+                        console.log(err);
+                    }
+                    else
+                    {
+                        obj = JSON.parse(fileData);
+                        // console.log("before for");
+                        // console.log(obj.users);
+                        for(var u in obj.users)
+                        {
+                            if(obj.users[u].roomName == roomName && obj.users[u].userName == userName)
+                            {
+                                obj.users.splice(u, 1);
+                            }
+                        }
+                        console.log(obj.users);
+                        for(var u in obj.users){
+                            if(obj.users[u].roomName == roomName)
+                            {
+                                thisRoomUsers.push(obj.users[u].userName);
+                            }
+                        }
+                        // var index = thisRoomUsers.indexOf(userName);
+                        // thisRoomUsers.splice(index, 1);
+                        socket.broadcast.in(roomName).emit('disconnected','<span style="color:#ff4242 !important;"<strong>'+userName+'</strong> left.</span><br>');
+                        io.sockets.in(roomName).emit('updateUsers',thisRoomUsers);
+
+                        json = JSON.stringify(obj);
+                        fs.writeFile('users.json', json, 'utf8');
+                        // console.log("after for");
+                        // console.log(obj.users);
+                        
+                    }
+                });
+            }
+        });
+        
     });
+
+    
 });
 
 
