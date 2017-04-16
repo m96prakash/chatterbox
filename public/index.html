@@ -54,21 +54,26 @@
         
     </body>
     <script type="text/javascript" src="js/jquery.min.js"></script>
-    <!-- // <script type="text/javascript" src="js/app.js"></script> -->
+    <script type="text/javascript" src="js/mittens.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script>
-
+        
         //initialize socket library and its object
         var socket = io();
-        
         //taking input from user
         var roomName = prompt("Enter name of chat room that you want to create or join");
 
         var userName = prompt("Enter your username");
+        createRoom();
+
+        function createRoom(){
+            ip = '';
+            getIPs(function(data){
+                //create chat room
+                socket.emit('createRoom',{roomName:roomName,userName:userName,ip:data});
+            });
+        }
         
-       
-        //create chat room
-        socket.emit('createRoom',{roomName:roomName,userName:userName});
 
         //when user joins the chat room
         socket.on('user joined',function(data){
@@ -81,7 +86,8 @@
         socket.on('updateUsers',function(data){
             onlineUsersDiv ='';
             for(var i in data){
-                onlineUsersDiv += '<p>'+data[i]+'</p>'; 
+                console.log(data);
+                onlineUsersDiv += '<p style="overflow-x: auto;">'+data[i].userName+' ('+data[i].userIP+')'+'</p>'; 
             }
             document.getElementById('online-users').innerHTML = onlineUsersDiv;
         });
