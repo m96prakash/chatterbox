@@ -17,20 +17,28 @@
         .wrapper{
             padding-top: 4%;
         }
+        .main-title{
+            text-align:center;
+        }
     </style>
     <body>
         <div class="container"> 
             <div class="row">
                 
                 <nav class="navbar navbar-default navbar-fixed-top">
-                     ChatterBox 
+                     <h3 class="main-title">ChatterBox</h3>
                 </nav>
                 <div class="wrapper">
-                    <div class="col-md-7 col-md-offset-2">
+                    <div class="col-md-2"> 
+                        <span style="border-bottom:1px solid grey;">Online Users</span>
+                        <div id="online-users"></div>
+                    </div>
+                    <div class="col-md-7 ">
                         <div id="message-container"></div>
                     </div>
                     <div class="col-md-3">
-                        <div id="typer-container"></div>
+                        <span style="border-bottom:1px solid grey;">User Status</span>
+                        <div id="user-status"></div>
                     </div>
                     <div class="form-group  bottom">
                         <div class="col-md-7 col-md-offset-2">
@@ -46,27 +54,46 @@
         
     </body>
     <script type="text/javascript" src="js/jquery.min.js"></script>
-    <script type="text/javascript" src="js/app.js"></script>
+    <!-- // <script type="text/javascript" src="js/app.js"></script> -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
+
         //initialize socket library and its object
         var socket = io();
         
         //taking input from user
         var roomName = prompt("Enter name of chat room that you want to create or join");
+
         var userName = prompt("Enter your username");
-      
+        
+       
         //create chat room
         socket.emit('createRoom',{roomName:roomName,userName:userName});
 
         //when user joins the chat room
         socket.on('user joined',function(data){
-            document.getElementById('message-container').innerHTML += data;
+            console.log(data);
+            document.getElementById('user-status').innerHTML += data;
+            
         });
         
+        //update latest users
+        socket.on('updateUsers',function(data){
+            onlineUsersDiv ='';
+            for(var i in data){
+                onlineUsersDiv += '<p>'+data[i]+'</p>'; 
+            }
+            document.getElementById('online-users').innerHTML = onlineUsersDiv;
+        });
+
         //to display when user leave chat room
         socket.on('disconnected',function(data){
-            document.getElementById('message-container').innerHTML += data;
+            document.getElementById('user-status').innerHTML += data;
+            onlineUsersDiv ='';
+            for(var i in data.clients){
+                onlineUsersDiv += '<p>'+data.clients[i]+'</p>'; 
+            }
+            document.getElementById('online-users').innerHTML = onlineUsersDiv;
         });
         
         //Press enter to send message code
@@ -79,6 +106,7 @@
         //Send message to server
         function sendMessage()
         {
+            $('#message').blur();
             var msg = document.getElementById('message').value;
             document.getElementById('message').value = '';
             if(msg){
@@ -127,8 +155,32 @@
         
         //Display broadcasted message
         socket.on('messageToBeDisplayed',function(data){
-            document.getElementById('message-container').innerHTML += data;
+            console.log("data.user => "+data.user);
+            console.log("username => "+userName);
+            if(data.user == userName){
+                document.getElementById('message-container').innerHTML += '<div style="text-align:right;border-bottom:1px solid #98a6ad;padding:8px;">'+data.message+'</div>';
+            }
+            else{
+                document.getElementById('message-container').innerHTML += '<div style="border-bottom:1px solid #98a6ad;padding:8px;"><strong>'+data.user+': </strong>'+data.message+'</div>';
+            }
+            document.getElementById('message-container').animate({ scrollBottom: $(document).height() }, 1000);
         });
         
+        // function checkUserName(roomName,userName)
+        // {
+        //     socket.emit('checkUserName',{roomName:roomName,userName:userName});
+        //     socket.on('isUserValid',function(data){
+        //         console.log("After validation at client "+data);
+        //         if(data == 'true')
+        //         {
+        //             return true;
+        //         }
+        //         else
+        //         {
+        //             return false;
+        //         }
+        //     })
+        // }
+
     </script>
 </html>
